@@ -1,1 +1,1 @@
-# Makes `train` importable as a package for ORM modules.
+# Makes `train` importable as a package for SqlAlchemy modules.

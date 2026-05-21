@@ -1,4 +1,4 @@
-"""Scratch space: validate plain dicts with the ORM-facing Pydantic schemas.
+"""Scratch space: validate plain dicts with the SqlAlchemy-facing Pydantic schemas.
 
 Do not name this file app.py: when run from this directory, Python would load it as
 top-level `app` and break `from app.schemas...` imports used by the train schemas.

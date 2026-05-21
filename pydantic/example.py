@@ -29,19 +29,19 @@ frontend_json = {
 # -------------------------
 # Parse + validate request
 # -------------------------
-user_data = UserRequest(**frontend_json)
+user_schema = UserRequest(**frontend_json)
 
 
 # -------------------------
 # Access fields safely
 # -------------------------
-print("User name:", user_data.name)
-print("User email:", user_data.email)
+print("User name:", user_schema.name)
+print("User email:", user_schema.email)
 
 # -------------------------
 # Turn the model back into json
 # -------------------------
-print("User Model:", user_data.model_dump())
+print("User Model:", user_schema.model_dump())
 
 
 # -------------------------
@@ -49,8 +49,8 @@ print("User Model:", user_data.model_dump())
 # -------------------------
 print("\nFields received from frontend:")
 
-for field_name, value in user_data.model_dump().items():
+for field_name, value in user_schema.model_dump().items():
     print(field_name, "=", value)
 
 
-print(user_data.name.key)  # "name"
+print(user_schema.name.key)  # "name"

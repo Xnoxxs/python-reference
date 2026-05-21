@@ -76,7 +76,8 @@ if __name__ == "__main__":
                 User.id != 1,
                 User.name.in_(["Jack", "Mark"])
             )
-            .order_by(User.created.desc())
+            .order_by(User.created.desc())  # desc: 2026 --> 2025 --> 2024
+                                            # asc: 2024 --> 2025 --> 2026
             .limit(20)
             .all()
         )
