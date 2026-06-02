@@ -46,7 +46,6 @@ class Booking(Base):
     # NOTE - Relationships
     activity = relationship("Activity", back_populates="bookings")
     user = relationship("User", back_populates="bookings")
-    activity_slot = relationship("ActivitySlot", back_populates="bookings")
     review = relationship("Review", back_populates="booking", uselist=False, cascade="all, delete-orphan")
 
 

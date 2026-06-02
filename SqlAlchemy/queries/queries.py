@@ -1,12 +1,14 @@
 
-from train.ORM.initialize import app, db
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload, defer, load_only
+from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload, defer, load_only, with_loader_criteria
+from sqlalchemy.testing import db
 
-from train.ORM.models.user import User
-from train.ORM.models.booking import Booking
-from train.ORM.models.review import Review
-
+from SqlAlchemy.models.activity import Activity
+from SqlAlchemy.models.activity_media import ActivityMedia
+from SqlAlchemy.models.booking import Booking
+from SqlAlchemy.models.review import Review
+from SqlAlchemy.models.user import User
+from deploymentPipeline.dev import app
 
 if __name__ == "__main__":
 
@@ -106,7 +108,7 @@ if __name__ == "__main__":
         bookings_with_review_score = (
             db.session.query(Booking)
             .options(
-                joinedload(Booking.review).load_only(Review.score)
+                joinedload(Booking.review).load_only(Review.score, Review.comment)
             )
             .all()
         )
@@ -151,12 +153,39 @@ if __name__ == "__main__":
 
 
         # -----------------------------------
-        #  Get user with bookings and with reviews for each booking  (relation)
+        #  Get user and his reviews for each booking  (relation)
+        #
+        # NOTE:
+        #   Even though you just wanted the reviews, The reviews don't have a direct relationship
+        #   to user. They have a traversing relationship. Which means that they are linked through
+        #   a different relationship. They don't have one of their own.
+        #   Meaning, that to get review of a user, you need to get booking first
+        #   And even though you don't need booking data, the query will still get it
+        #   because that is how SQL works
         # -----------------------------------
         user_bookings_with_review = (
             db.session.query(User)
             .options(
                 joinedload(User.bookings).joinedload(Booking.review)
+            )
+            .all()
+        )
+        # Improved Version
+        # NOTE:
+        #  The question is not: "Can I avoid loading Activity?"
+        #  The answer is: No.
+        #  The real question is: "Can I load the minimum amount of Activity possible?"
+        #  And the answer is: Yes
+        #  .options(
+        #     joinedload(Booking.activity)
+        #         .load_only(Activity.id)
+        #         .joinedload(Activity.activity_media)
+        # )
+        user_bookings_with_review = (
+            db.session.query(User)
+            .options(
+                joinedload(User.bookings)
+                .load_only(Booking.id).joinedload(Booking.review)
             )
             .all()
         )
@@ -202,3 +231,60 @@ if __name__ == "__main__":
         for row in users_with_booking_count:
             user_id, user_name, booking_count = row
             print(user_id, user_name, booking_count)
+
+        # -----------------------------------
+        # Get bookings with activity,
+        # but only the first media (lowest id)
+        # for each activity
+        #
+        # NOTE:
+        #   Activity -> ActivityMedia is a one-to-many relationship.
+        #
+        #   By default:
+        #
+        #       joinedload(Activity.activity_media)
+        #
+        #   loads ALL media.
+        #
+        #   The loader criteria below filters the
+        #   relationship so that only the media row
+        #   having the smallest id for that activity
+        #   is loaded.
+        # -----------------------------------
+        bookings_with_first_media = (
+            db.session.query(Booking)
+            .options(
+                joinedload(Booking.activity).options(
+                    load_only(Activity.id),
+                    joinedload(Activity.activity_media),
+                ),
+
+                with_loader_criteria(
+                    ActivityMedia,
+                    ActivityMedia.id
+                    == (
+                        select(func.min(ActivityMedia.id))
+                        .where(
+                            ActivityMedia.activity_id == Activity.id
+                        )
+                        .correlate(Activity)
+                        .scalar_subquery()
+                    ),
+                    include_aliases=True,
+                ),
+            )
+            .all()
+        )
+
+        print("\nQuery Result:")
+        for booking in bookings_with_first_media:
+            media_ids = [
+                media.id
+                for media in booking.activity.activity_media
+            ]
+
+            print(
+                booking.id,
+                booking.activity.id,
+                media_ids,
+            )
